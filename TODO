@@ -1,5 +1,3 @@
-- add biases. Should be doable based on the lyxfile.
-
 - make a version that batches up inversions (with specified batch size) and passes them off to a helper function.
 
 - implement a dummy batched inversion that just does them in sequence
