@@ -30,7 +30,7 @@ def binarize_matrix(B):
 
 
 
-def _recompute_factors(Y, Sl, Dl, Il, lambda_reg, dtype='float32'):
+def recompute_factors(Y, Sl, Dl, Il, lambda_reg, dtype='float32'):
     """
     recompute matrix X from Y.
     X = recompute_factors(Y, Sl, Dl, Il, lambda_reg_x)
@@ -63,18 +63,10 @@ def _recompute_factors(Y, Sl, Dl, Il, lambda_reg, dtype='float32'):
 
 
 
-def _recompute_factors_biased(Y, Sl, Dl, Il, lambda_reg, dtype='float32'):
+def recompute_factors_bias(Y, Sl, Dl, Il, lambda_reg, dtype='float32'):
     """
-    recompute matrix X from Y.
-    X = recompute_factors(Y, Sl, Dl, Il, lambda_reg_x)
-    This can also be used for the reverse operation as follows:
-    Y = recompute_factors(X, STl, DTl, ITl, lambda_reg_y)
-    
-    Sl: data for S matrix
-    Dl: data for D matrix
-    Il: indices for both matrices
-    
-    The comments are in terms of X being the users and Y being the items.
+    Like recompute_factors, but the last column of X and Y is treated as
+    a bias vector.
     """
     m = Dl.shape[0] # m = number of users
     f = Y.shape[1] - 1 # f = number of factors
@@ -114,7 +106,7 @@ def _recompute_factors_biased(Y, Sl, Dl, Il, lambda_reg, dtype='float32'):
 
 
 
-def factorize(P, S, num_factors, lambda_reg=1e-5, num_iterations=20, bias=False, init_std=0.01, verbose=False, dtype='float32'):
+def factorize(P, S, num_factors, lambda_reg=1e-5, num_iterations=20, init_std=0.01, verbose=False, dtype='float32', recompute_factors=recompute_factors, *args, **kwargs):
     """
     factorize a given sparse matrix using the Weighted Matrix Factorization algorithm by
     Hu, Koren and Volinsky.
@@ -131,14 +123,14 @@ def factorize(P, S, num_factors, lambda_reg=1e-5, num_iterations=20, bias=False,
     num_iterations: the number of iterations to run the algorithm for. Each iteration consists
         of two steps, one to recompute U given V, and one to recompute V given U.
 
-    bias: learn biases for users and items.
-
     init_std: the standard deviation of the Gaussian with which V is initialized.
 
     verbose: print a bunch of stuff during training, including timing information.
 
     dtype: the dtype of the resulting factor matrices. Using single precision is recommended,
         it speeds things up a bit.
+
+    recompute_factors: helper function that implements the inner loop.
 
     returns:
         U, V: factor matrices. If bias=True, the last columns of the matrices contain the biases.
@@ -188,28 +180,21 @@ def factorize(P, S, num_factors, lambda_reg=1e-5, num_iterations=20, bias=False,
         print "run ALS algorithm"
         start_time = time.time()
 
-    if bias:
-        n = num_factors + 1
-        recompute_factors = _recompute_factors_biased
-    else:
-        n = num_factors
-        recompute_factors = _recompute_factors
-
     U = None # no need to initialize U, it will be overwritten anyway
-    V = np.random.randn(num_items, n).astype(dtype) * init_std
+    V = np.random.randn(num_items, num_factors).astype(dtype) * init_std
 
     for i in xrange(num_iterations):
         if verbose:
             print "  iteration %d" % i
             print "    recompute user factors U"
 
-        U = recompute_factors(V, Sl, Dl, Il, lambda_reg, dtype=dtype)
+        U = recompute_factors(V, Sl, Dl, Il, lambda_reg, dtype, *args, **kwargs)
 
         if verbose:
             print "    time since start: %.3f seconds" % (time.time() - start_time)
             print "    recompute item factors V"
 
-        V = recompute_factors(U, STl, DTl, ITl, lambda_reg, dtype=dtype)
+        V = recompute_factors(U, STl, DTl, ITl, lambda_reg, dtype, *args, **kwargs)
 
         if verbose:
             print "    time since start: %.3f seconds" % (time.time() - start_time)
