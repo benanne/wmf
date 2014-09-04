@@ -161,17 +161,19 @@ def factorize(P, S, num_factors, lambda_reg=1e-5, num_iterations=20, init_std=0.
     DTl = np.empty((DT.shape[0]), dtype='object')
     ITl = np.empty((DT.shape[0]), dtype='object')
 
-    for i, s_u, d_u in itertools.izip(xrange(D.shape[0]), S, D):
-        Dl[i] = d_u.data
-        Sl[i] = s_u.data
-        Il[i] = d_u.indices
-        
+    for i in xrange(D.shape[0]):
+        lo, hi = D.indptr[i], D.indptr[i + 1]
+        Dl[i] = D.data[lo:hi]
+        Sl[i] = S.data[lo:hi]
+        Il[i] = D.indices[lo:hi]
+
     del S, D # don't need these anymore
 
-    for i, s_u, d_u in itertools.izip(xrange(DT.shape[0]), ST, DT):
-        DTl[i] = d_u.data
-        STl[i] = s_u.data
-        ITl[i] = d_u.indices
+    for i in xrange(DT.shape[0]):
+        lo, hi = DT.indptr[i], DT.indptr[i + 1]
+        DTl[i] = DT.data[lo:hi]
+        STl[i] = ST.data[lo:hi]
+        ITl[i] = DT.indices[lo:hi]
         
     del DT, ST # don't need these anymore
 
