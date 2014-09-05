@@ -1,8 +1,1 @@
-- make a version that batches up inversions (with specified batch size) and passes them off to a helper function.
-
-- implement a dummy batched inversion that just does them in sequence
-
-- implement a batched inversion on the CPU using multiprocessing
-
-- implement a batched inversion on the GPU using scikits.cuda
-
+- batched_inv_gpu.solve_gpu reallocates a bunch of arrays for every batch. It would be better to do the allocation once and reuse these allocations on subsequent calls.

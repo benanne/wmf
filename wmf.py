@@ -114,7 +114,7 @@ def factorize(P, S, num_factors, lambda_reg=1e-5, num_iterations=20, init_std=0.
     P: sparse binary matrix to factorize.
 
     S: 'surplus' confidence matrix, i.e. C - I where C is the matrix with confidence weights.
-        S is sparse while C is not (and the sparsity pattern of S is the same as that of B).
+        S is sparse while C is not (and the sparsity pattern of S is the same as that of P).
 
     num_factors: the number of factors.
 
