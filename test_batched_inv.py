@@ -1,8 +1,8 @@
 import numpy as np
 import wmf
 import batched_inv
-import batched_inv_mp
-import batched_inv_gpu
+import solve_mp
+import solve_gpu
 
 np.random.seed(123)
 
@@ -17,8 +17,8 @@ num_iterations = 1
 batch_size = 1000
 
 # solve = batched_inv.solve_sequential
-# solve = batched_inv_mp.solve_mp
-solve = batched_inv_gpu.solve_gpu
+# solve = solve_mp.solve_mp
+solve = solve_gpu.solve_gpu
 
 
 U, V = wmf.factorize(P, S, num_factors=num_factors, lambda_reg=1e-5, num_iterations=num_iterations, init_std=0.01, verbose=True, dtype='float32',

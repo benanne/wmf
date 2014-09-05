@@ -1,5 +1,7 @@
 - test solve_gpu on a proper GPU and measure speedups for several num_factors/batch_size values
 
-- depending on how much time is taken up doing sparse computations on the CPU / dense computations on the GPU, it might be useful to do these in parallel (using one or more generators running in separate processes).
+- do batch-building in a separate process (in parallel with GPU) and if possible, in multiple processes with Pool.map!
+
+- maybe also consider using Cython to speed up the for loop and numpy array indexing?
 
 - The algorithm could be adapted to work with CSR representations stored on disk in e.g. HDF5 format (for very large matrices). Try this?
