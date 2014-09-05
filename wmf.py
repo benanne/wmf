@@ -30,6 +30,11 @@ def binarize_matrix(B):
 
 
 def iter_rows(S, D):
+    """
+    Helper function to iterate quickly over the data and indices of the
+    rows of the S and D matrices. A naive implementation using indexing
+    on D and S is much, much slower.
+    """
     for i in xrange(D.shape[0]):
         lo, hi = D.indptr[i], D.indptr[i + 1]
         yield i, S.data[lo:hi], D.data[lo:hi], D.indices[lo:hi]
