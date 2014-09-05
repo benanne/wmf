@@ -83,7 +83,7 @@ def recompute_factors_bias_batched_mp(Y, S, D, lambda_reg, dtype='float32', batc
     pool = mp.Pool(num_batch_build_processes)
     batch_gen = pool.imap(func, xrange(num_batches))
 
-    for A_stack, B_stack in batch_gen:
+    for b, (A_stack, B_stack) in enumerate(batch_gen):
         lo = b * batch_size
         hi = min((b + 1) * batch_size, m)
 
