@@ -11,7 +11,9 @@ import multiprocessing as mp
 
 class CallableObject(object):
     """
-    Hack for multiprocessing stuff
+    Hack for multiprocessing stuff. This creates a callable wrapper object
+    with a single argument, that calls the original function with this argument
+    plus any other arguments passed at creation time.
     """
     def __init__(self, func, *args, **kwargs):
         self.func = func
@@ -25,6 +27,7 @@ class CallableObject(object):
 def get_rows(S, D, i):
     lo, hi = D.indptr[i], D.indptr[i + 1]
     return S.data[lo:hi], D.data[lo:hi], D.indices[lo:hi]
+
 
 def build_batch(b, S, D, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype):
     lo = b * batch_size
@@ -52,7 +55,7 @@ def build_batch(b, S, D, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype):
     return A_stack, B_stack
 
 
-def recompute_factors_bias_batched_mp(Y, S, D, lambda_reg, dtype='float32', batch_size=1, solve=batched_inv.solve_sequential):
+def recompute_factors_bias_batched_mp(Y, S, D, lambda_reg, dtype='float32', batch_size=1, solve=batched_inv.solve_sequential, num_batch_build_processes=4):
     m = D.shape[0] # m = number of users
     f = Y.shape[1] - 1 # f = number of factors
     
@@ -75,13 +78,12 @@ def recompute_factors_bias_batched_mp(Y, S, D, lambda_reg, dtype='float32', batc
 
     num_batches = int(np.ceil(m / float(batch_size)))
 
-    rows_gen = wmf.iter_rows(S, D)
+    func = CallableObject(build_batch, S, D, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype)
 
-    for b in xrange(num_batches):
-        lo = b * batch_size
-        hi = min((b + 1) * batch_size, m)
-        
-        A_stack, B_stack = build_batch(b, S, D, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype)
+    pool = mp.Pool(num_batch_build_processes)
+    batch_gen = pool.imap(func, xrange(num_batches))
+
+    for A_stack, B_stack in batch_gen:
         X_stack = solve(A_stack, B_stack)
         X_new[lo:hi] = X_stack
 
