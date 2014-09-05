@@ -1,6 +1,12 @@
 import numpy as np
 import wmf
-import batched_inv
+
+import pyximport
+pyximport.install()
+
+import batched_inv_cython as batched_inv
+# import batched_inv
+
 import solve_mp
 import solve_gpu
 

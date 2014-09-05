@@ -1,6 +1,6 @@
-- test solve_gpu on a proper GPU and measure speedups for several num_factors/batch_size values
+- profile code with solve_gpu to identify the slowest parts of the batch building code
 
-- do batch-building in a separate process (in parallel with GPU) and if possible, in multiple processes with Pool.map!
+- test solve_gpu on a proper GPU and measure speedups for several num_factors/batch_size values
 
 - maybe also consider using Cython to speed up the for loop and numpy array indexing?
 

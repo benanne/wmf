@@ -1,0 +1,11 @@
+def make_ext(modname, pyxfilename):
+    from distutils.extension import Extension
+    ext = Extension(name = modname,
+        sources=[pyxfilename],
+        extra_compile_args=['-I/home/sander/exec/anaconda/lib/libpython2.7.so',
+                            '-I/home/sander/exec/anaconda/lib/python2.7/site-packages/numpy/core/include'],
+        extra_link_args=['-L/home/sander/exec/anaconda/lib/libpython2.7.so'])
+    return ext
+
+def make_setup_args():
+    return dict(script_args=["--verbose"])
