@@ -20,25 +20,36 @@ def bptrs(a):
                 dtype=cublas.ctypes.c_void_p)
 
 
+allocated_shape = [None]
+allocations = [None]
+
 def solve_gpu(As, Bs):
     batch_size, num_factors = As.shape
 
-    # transfer As and Bs to GPU
-    As_gpu = pycuda.gpuarray.to_gpu(As.astype('float32'))
-    Bs_gpu = pycuda.gpuarray.to_gpu(Bs.astype('float32'))
+    if allocated_shape[0] == As.shape: # reuse previous allocations
+        As_gpu, Bs_gpu, P_gpu, info_gpu, Cs_gpu, Rs_gpu, A_arr, B_arr, C_arr, R_arr = allocations[0]
+        As_gpu.set(As)
+        Bs_gpu.set(Bs)
+    else: # allocate
+        # transfer As and Bs to GPU
+        As_gpu = pycuda.gpuarray.to_gpu(As.astype('float32'))
+        Bs_gpu = pycuda.gpuarray.to_gpu(Bs.astype('float32'))
 
-    # allocate output arrays
-    P_gpu = pycuda.gpuarray.empty((batch_size, num_factors), np.int32)
-    info_gpu = pycuda.gpuarray.zeros(batch_size, np.int32)
-    info2_gpu = pycuda.gpuarray.zeros(batch_size, np.int32)
-    Cs_gpu = pycuda.gpuarray.empty_like(Bs_gpu) # inverted Bs.
-    Rs_gpu = pycuda.gpuarray.empty_like(As_gpu) # final output, As * inverted Bs.
-    
-    # get pointer arrays
-    A_arr = bptrs(As_gpu)
-    B_arr = bptrs(Bs_gpu)
-    C_arr = bptrs(Cs_gpu)
-    R_arr = bptrs(Rs_gpu)
+        # allocate arrays
+        P_gpu = pycuda.gpuarray.empty((batch_size, num_factors), np.int32)
+        info_gpu = pycuda.gpuarray.zeros(batch_size, np.int32)
+        Cs_gpu = pycuda.gpuarray.empty_like(Bs_gpu) # inverted Bs.
+        Rs_gpu = pycuda.gpuarray.empty_like(As_gpu) # final output, As * inverted Bs.
+        
+        # get pointer arrays
+        A_arr = bptrs(As_gpu)
+        B_arr = bptrs(Bs_gpu)
+        C_arr = bptrs(Cs_gpu)
+        R_arr = bptrs(Rs_gpu)
+
+        allocated_shape[0] = As.shape
+        allocations[0] = As_gpu, Bs_gpu, P_gpu, info_gpu, Cs_gpu, Rs_gpu, A_arr, B_arr, C_arr, R_arr
+
 
     handle = scikits.cuda.misc._global_cublas_handle
 
@@ -47,7 +58,7 @@ def solve_gpu(As, Bs):
     # the LU factorization is now in Bs_gpu!
 
     # use factorization to perform inversion
-    cublas.cublasSgetriBatched(handle, num_factors, B_arr.gpudata, num_factors, P_gpu.gpudata, C_arr.gpudata, num_factors, info2_gpu.gpudata, batch_size)
+    cublas.cublasSgetriBatched(handle, num_factors, B_arr.gpudata, num_factors, P_gpu.gpudata, C_arr.gpudata, num_factors, info_gpu.gpudata, batch_size)
     # the inverted matrices are now in Cs_gpu!
 
     # compute dot products dot(A, C) = dot(A, Binv). Note that the As are actually vectors!
