@@ -1,4 +1,5 @@
 import numpy as np
+import wmf
 
 
 def solve_sequential(As, Bs):
@@ -20,12 +21,12 @@ def solve_sequential_inv(As, Bs):
     return X_stack
 
 
-def recompute_factors_bias_batched(Y, Sl, Dl, Il, lambda_reg, dtype='float32', batch_size=1, solve=solve_sequential):
+def recompute_factors_bias_batched(Y, S, D, lambda_reg, dtype='float32', batch_size=1, solve=solve_sequential):
     """
     Like recompute_factors_bias, but the inversion/solving happens in batches
     and is performed by a solver function that can also be swapped out.
     """
-    m = Dl.shape[0] # m = number of users
+    m = D.shape[0] # m = number of users
     f = Y.shape[1] - 1 # f = number of factors
     
     b_y = Y[:, f] # vector of biases
@@ -47,6 +48,8 @@ def recompute_factors_bias_batched(Y, Sl, Dl, Il, lambda_reg, dtype='float32', b
 
     num_batches = int(np.ceil(m / float(batch_size)))
 
+    rows_gen = wmf.iter_rows(S, D)
+
     for b in xrange(num_batches):
         lo = b * batch_size
         hi = min((b + 1) * batch_size, m)
@@ -55,10 +58,8 @@ def recompute_factors_bias_batched(Y, Sl, Dl, Il, lambda_reg, dtype='float32', b
         A_stack = np.empty((current_batch_size, f + 1), dtype=dtype)
         B_stack = np.empty((current_batch_size, f + 1, f + 1), dtype=dtype)
 
-        for ib, k in enumerate(xrange(lo, hi)):
-            s_u = Sl[k]
-            d_u = Dl[k]
-            i_u = Il[k]
+        for ib in xrange(current_batch_size):
+            k, s_u, d_u, i_u = rows_gen.next()
 
             Y_u = Y_e[i_u] # exploit sparsity
             b_y_u = b_y[i_u]

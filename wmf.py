@@ -29,27 +29,28 @@ def binarize_matrix(B):
 
 
 
+def iter_rows(S, D):
+    for i in xrange(D.shape[0]):
+        lo, hi = D.indptr[i], D.indptr[i + 1]
+        yield i, S.data[lo:hi], D.data[lo:hi], D.indices[lo:hi]
 
-def recompute_factors(Y, Sl, Dl, Il, lambda_reg, dtype='float32'):
+
+def recompute_factors(Y, S, D, lambda_reg, dtype='float32'):
     """
     recompute matrix X from Y.
-    X = recompute_factors(Y, Sl, Dl, Il, lambda_reg_x)
+    X = recompute_factors(Y, S, D, lambda_reg_x)
     This can also be used for the reverse operation as follows:
-    Y = recompute_factors(X, STl, DTl, ITl, lambda_reg_y)
-    
-    Sl: data for S matrix
-    Dl: data for D matrix
-    Il: indices for both matrices
+    Y = recompute_factors(X, ST, DT, lambda_reg_y)
     
     The comments are in terms of X being the users and Y being the items.
     """
-    m = Dl.shape[0] # m = number of users
+    m = D.shape[0] # m = number of users
     f = Y.shape[1] # f = number of factors
     YTY = np.dot(Y.T, Y) # precompute this
     YTYpI = YTY + lambda_reg * np.eye(f)
     X_new = np.zeros((m, f), dtype=dtype)
 
-    for k, s_u, d_u, i_u in itertools.izip(xrange(m), Sl, Dl, Il):
+    for k, s_u, d_u, i_u in iter_rows(S, D):
         Y_u = Y[i_u] # exploit sparsity
         A = d_u.dot(Y_u)
         YTSY = np.dot(Y_u.T, (Y_u * s_u.reshape(-1, 1)))
@@ -63,12 +64,12 @@ def recompute_factors(Y, Sl, Dl, Il, lambda_reg, dtype='float32'):
 
 
 
-def recompute_factors_bias(Y, Sl, Dl, Il, lambda_reg, dtype='float32'):
+def recompute_factors_bias(Y, S, D, lambda_reg, dtype='float32'):
     """
     Like recompute_factors, but the last column of X and Y is treated as
     a bias vector.
     """
-    m = Dl.shape[0] # m = number of users
+    m = D.shape[0] # m = number of users
     f = Y.shape[1] - 1 # f = number of factors
     
     b_y = Y[:, f] # vector of biases
@@ -88,7 +89,7 @@ def recompute_factors_bias(Y, Sl, Dl, Il, lambda_reg, dtype='float32'):
 
     X_new = np.zeros((m, f + 1), dtype=dtype)
 
-    for k, s_u, d_u, i_u in itertools.izip(xrange(m), Sl, Dl, Il):
+    for k, s_u, d_u, i_u in iter_rows(S, D):
         Y_u = Y_e[i_u] # exploit sparsity
         b_y_u = b_y[i_u]
         A = d_u.dot(Y_u)
@@ -150,35 +151,6 @@ def factorize(P, S, num_factors, lambda_reg=1e-5, num_iterations=20, init_std=0.
 
     if verbose:
         print "  took %.3f seconds" % (time.time() - start_time)
-        print "convert matrices to row arrays for faster row iteration"
-        start_time = time.time()
-
-    Sl = np.empty((D.shape[0]), dtype='object')
-    Dl = np.empty((D.shape[0]), dtype='object')
-    Il = np.empty((D.shape[0]), dtype='object')
-
-    STl = np.empty((DT.shape[0]), dtype='object')
-    DTl = np.empty((DT.shape[0]), dtype='object')
-    ITl = np.empty((DT.shape[0]), dtype='object')
-
-    for i in xrange(D.shape[0]):
-        lo, hi = D.indptr[i], D.indptr[i + 1]
-        Dl[i] = D.data[lo:hi]
-        Sl[i] = S.data[lo:hi]
-        Il[i] = D.indices[lo:hi]
-
-    del S, D # don't need these anymore
-
-    for i in xrange(DT.shape[0]):
-        lo, hi = DT.indptr[i], DT.indptr[i + 1]
-        DTl[i] = DT.data[lo:hi]
-        STl[i] = ST.data[lo:hi]
-        ITl[i] = DT.indices[lo:hi]
-        
-    del DT, ST # don't need these anymore
-
-    if verbose:
-        print "  took %.3f seconds" % (time.time() - start_time)
         print "run ALS algorithm"
         start_time = time.time()
 
@@ -190,17 +162,15 @@ def factorize(P, S, num_factors, lambda_reg=1e-5, num_iterations=20, init_std=0.
             print "  iteration %d" % i
             print "    recompute user factors U"
 
-        U = recompute_factors(V, Sl, Dl, Il, lambda_reg, dtype, *args, **kwargs)
+        U = recompute_factors(V, S, D, lambda_reg, dtype, *args, **kwargs)
 
         if verbose:
             print "    time since start: %.3f seconds" % (time.time() - start_time)
             print "    recompute item factors V"
 
-        V = recompute_factors(U, STl, DTl, ITl, lambda_reg, dtype, *args, **kwargs)
+        V = recompute_factors(U, ST, DT, lambda_reg, dtype, *args, **kwargs)
 
         if verbose:
             print "    time since start: %.3f seconds" % (time.time() - start_time)
-
-    del Sl, Dl, Il, STl, DTl, ITl # don't need these anymore
 
     return U, V
