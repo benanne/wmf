@@ -26,7 +26,7 @@ def get_rows(S, D, i):
     lo, hi = D.indptr[i], D.indptr[i + 1]
     return S.data[lo:hi], D.data[lo:hi], D.indices[lo:hi]
 
-def build_batch(b, S, D, batch_size, m, f, dtype):
+def build_batch(b, S, D, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype):
     lo = b * batch_size
     hi = min((b + 1) * batch_size, m)
     current_batch_size = hi - lo
@@ -78,7 +78,7 @@ def recompute_factors_bias_batched_mp(Y, S, D, lambda_reg, dtype='float32', batc
     rows_gen = wmf.iter_rows(S, D)
 
     for b in xrange(num_batches):
-        A_stack, B_stack = build_batch(b, S, D, batch_size, m, f, dtype)
+        A_stack, B_stack = build_batch(b, S, D, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype)
         X_stack = solve(A_stack, B_stack)
         X_new[lo:hi] = X_stack
 
