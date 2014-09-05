@@ -84,6 +84,9 @@ def recompute_factors_bias_batched_mp(Y, S, D, lambda_reg, dtype='float32', batc
     batch_gen = pool.imap(func, xrange(num_batches))
 
     for A_stack, B_stack in batch_gen:
+        lo = b * batch_size
+        hi = min((b + 1) * batch_size, m)
+
         X_stack = solve(A_stack, B_stack)
         X_new[lo:hi] = X_stack
 
