@@ -78,6 +78,9 @@ def recompute_factors_bias_batched_mp(Y, S, D, lambda_reg, dtype='float32', batc
     rows_gen = wmf.iter_rows(S, D)
 
     for b in xrange(num_batches):
+        lo = b * batch_size
+        hi = min((b + 1) * batch_size, m)
+        
         A_stack, B_stack = build_batch(b, S, D, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype)
         X_stack = solve(A_stack, B_stack)
         X_new[lo:hi] = X_stack
