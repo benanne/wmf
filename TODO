@@ -1,9 +1,17 @@
-- give up on cython for now, port some of the improvements (+YTYpR and -byY outside loop, merged matrix-vector dot product) to the non-cython version.
+- build a version that does most of the batch building on the GPU (using scikits.cuda / pycuda).
+    * pycuda.gpuarray.GPUArray does not seem to do advanced indexing. So how will that work? Theano does, but mixing Theano and pycuda might not be the best idea?
+    * alternatively implement batch matrix inversion using scikits.cuda as a Theano op, and do everything in Theano.
+        * problem with that: can't really do in-place updates of the factors on the GPU. So that would mean they have to live on the CPU. So that would probably still be slow...
+
+    * need to implement a pycuda kernel to do the indexing or something. Should not be too hard, it's just a fancy copy operation.
+        Example of a 'harder' kernel: http://wiki.tiker.net/PyCuda/Examples/MatrixmulTiled
+
+- build a version that uses multiprocessing WITHIN batch generation (instead of generating multiple batches simultaneously).
 
 - profile code with solve_gpu to identify the slowest parts of the batch building code
 
-- Cython version: get rid of np.dot and implement these operations manually.
-
-- consider building a version that does most of the batch building on the GPU (using scikits.cuda / pycuda).
 
 - The algorithm could be adapted to work with CSR representations stored on disk in e.g. HDF5 format (for very large matrices). Try this?
+
+
+How to do a partial matrix update in PyCUDA: http://stackoverflow.com/questions/5708319/pycuda-gpuarray-slice-based-operations

@@ -21,12 +21,12 @@ def solve_sequential_inv(As, Bs):
     return X_stack
 
 
-def recompute_factors_bias_batched(Y, S, D, lambda_reg, dtype='float32', batch_size=1, solve=solve_sequential):
+def recompute_factors_bias_batched(Y, S, lambda_reg, dtype='float32', batch_size=1, solve=solve_sequential):
     """
     Like recompute_factors_bias, but the inversion/solving happens in batches
     and is performed by a solver function that can also be swapped out.
     """
-    m = D.shape[0] # m = number of users
+    m = S.shape[0] # m = number of users
     f = Y.shape[1] - 1 # f = number of factors
     
     b_y = Y[:, f] # vector of biases
@@ -48,7 +48,7 @@ def recompute_factors_bias_batched(Y, S, D, lambda_reg, dtype='float32', batch_s
 
     num_batches = int(np.ceil(m / float(batch_size)))
 
-    rows_gen = wmf.iter_rows(S, D)
+    rows_gen = wmf.iter_rows(S)
 
     for b in xrange(num_batches):
         lo = b * batch_size
@@ -59,12 +59,12 @@ def recompute_factors_bias_batched(Y, S, D, lambda_reg, dtype='float32', batch_s
         B_stack = np.empty((current_batch_size, f + 1, f + 1), dtype=dtype)
 
         for ib in xrange(current_batch_size):
-            k, s_u, d_u, i_u = rows_gen.next()
+            k, s_u, i_u = rows_gen.next()
 
             Y_u = Y_e[i_u] # exploit sparsity
             b_y_u = b_y[i_u]
 
-            A_stack[ib] = np.dot(d_u - (b_y_u * s_u), Y_u)
+            A_stack[ib] = np.dot((1 - b_y_u) * s_u + 1, Y_u) # np.dot(s_u + 1 - (b_y_u * s_u), Y_u)
             B_stack[ib] = np.dot(Y_u.T, (Y_u * s_u[:, None]))
 
         A_stack -= byY[None, :]

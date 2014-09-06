@@ -75,12 +75,12 @@ class CallableObject(object):
         return self.func(arg, *self.args, **self.kwargs)
 
 
-def get_rows(S, D, i):
-    lo, hi = D.indptr[i], D.indptr[i + 1]
-    return S.data[lo:hi], D.data[lo:hi], D.indices[lo:hi]
+def get_row(S, i):
+    lo, hi = S.indptr[i], S.indptr[i + 1]
+    return S.data[lo:hi], S.indices[lo:hi]
 
 
-def build_batch(b, S, D, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype):
+def build_batch(b, S, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype):
     lo = b * batch_size
     hi = min((b + 1) * batch_size, m)
     current_batch_size = hi - lo
@@ -89,11 +89,11 @@ def build_batch(b, S, D, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype):
     B_stack = np.empty((current_batch_size, f + 1, f + 1), dtype=dtype)
 
     for ib, k in enumerate(xrange(lo, hi)):
-        s_u, d_u, i_u = get_rows(S, D, k)
+        s_u, i_u = get_row(S, k)
 
         Y_u = Y_e[i_u] # exploit sparsity
         b_y_u = b_y[i_u]
-        A = d_u.dot(Y_u)
+        A = (s_u + 1).dot(Y_u)
         A -= np.dot(b_y_u, (Y_u * s_u[:, None]))
         A -= byY
 
@@ -106,8 +106,8 @@ def build_batch(b, S, D, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype):
     return A_stack, B_stack
 
 
-def recompute_factors_bias_batched_mp(Y, S, D, lambda_reg, dtype='float32', batch_size=1, solve=batched_inv.solve_sequential, num_batch_build_processes=4):
-    m = D.shape[0] # m = number of users
+def recompute_factors_bias_batched_mp(Y, S, lambda_reg, dtype='float32', batch_size=1, solve=batched_inv.solve_sequential, num_batch_build_processes=4):
+    m = S.shape[0] # m = number of users
     f = Y.shape[1] - 1 # f = number of factors
     
     b_y = Y[:, f] # vector of biases
@@ -129,7 +129,7 @@ def recompute_factors_bias_batched_mp(Y, S, D, lambda_reg, dtype='float32', batc
 
     num_batches = int(np.ceil(m / float(batch_size)))
 
-    func = CallableObject(build_batch, S, D, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype)
+    func = CallableObject(build_batch, S, Y_e, b_y, byY, YTYpR, batch_size, m, f, dtype)
 
     pool = mp.Pool(num_batch_build_processes)
     batch_gen = pool.imap(func, xrange(num_batches))

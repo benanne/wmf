@@ -27,14 +27,14 @@ def solve_sequential_inv(As, Bs):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def recompute_factors_bias_batched(np.ndarray[DTYPE_t, ndim=2] Y, S, D, float lambda_reg, dtype='float32', int batch_size=1, solve=solve_sequential):
+def recompute_factors_bias_batched(np.ndarray[DTYPE_t, ndim=2] Y, S, float lambda_reg, dtype='float32', int batch_size=1, solve=solve_sequential):
     """
     Like recompute_factors_bias, but the inversion/solving happens in batches
     and is performed by a solver function that can also be swapped out.
     """
     assert dtype == 'float32'
 
-    cdef int m = D.shape[0] # m = number of users
+    cdef int m = S.shape[0] # m = number of users
     cdef int f = Y.shape[1] - 1 # f = number of factors
     
     cdef np.ndarray[np.float32_t, ndim=1] b_y = Y[:, f] # vector of biases
@@ -63,10 +63,9 @@ def recompute_factors_bias_batched(np.ndarray[DTYPE_t, ndim=2] Y, S, D, float la
     cdef np.ndarray[np.float32_t, ndim=2] Y_u
     cdef np.ndarray[np.float32_t, ndim=1] b_y_u
 
-    cdef np.ndarray[np.int32_t, ndim=1] Dindptr = D.indptr
-    cdef np.ndarray[np.float32_t, ndim=1] Ddata = D.data
+    cdef np.ndarray[np.int32_t, ndim=1] Sindptr = S.indptr
     cdef np.ndarray[np.float32_t, ndim=1] Sdata = S.data
-    cdef np.ndarray[np.int32_t, ndim=1] Dindices = D.indices
+    cdef np.ndarray[np.int32_t, ndim=1] Sindices = S.indices
 
     for b in range(num_batches):
         lo = b * batch_size
@@ -78,17 +77,16 @@ def recompute_factors_bias_batched(np.ndarray[DTYPE_t, ndim=2] Y, S, D, float la
 
         for ib in range(current_batch_size):
             k = lo + ib
-            k_lo = Dindptr[k]
-            k_hi = Dindptr[k + 1]
+            k_lo = Sindptr[k]
+            k_hi = Sindptr[k + 1]
 
             s_u = Sdata[k_lo:k_hi]
-            d_u = Ddata[k_lo:k_hi]
-            i_u = Dindices[k_lo:k_hi]
+            i_u = Sindices[k_lo:k_hi]
 
             Y_u = Y_e[i_u] # exploit sparsity
             b_y_u = b_y[i_u]
 
-            A_stack[ib] = np.dot(d_u - (b_y_u * s_u), Y_u)
+            A_stack[ib] = np.dot((1 - b_y_u) * s_u + 1, Y_u)
             B_stack[ib] = np.dot(Y_u.T, (Y_u * s_u[:, None]))
 
         A_stack -= byY[None, :]
