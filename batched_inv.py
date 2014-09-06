@@ -63,15 +63,12 @@ def recompute_factors_bias_batched(Y, S, D, lambda_reg, dtype='float32', batch_s
 
             Y_u = Y_e[i_u] # exploit sparsity
             b_y_u = b_y[i_u]
-            A = d_u.dot(Y_u)
-            A -= np.dot(b_y_u, (Y_u * s_u[:, None]))
-            A -= byY
 
-            YTSY = np.dot(Y_u.T, (Y_u * s_u[:, None]))
-            B = YTSY + YTYpR
+            A_stack[ib] = np.dot(d_u - (b_y_u * s_u), Y_u)
+            B_stack[ib] = np.dot(Y_u.T, (Y_u * s_u[:, None]))
 
-            A_stack[ib] = A
-            B_stack[ib] = B
+        A_stack -= byY[None, :]
+        B_stack += YTYpR[None, :, :]
 
         print "start batch solve %d" % b
         X_stack = solve(A_stack, B_stack)
