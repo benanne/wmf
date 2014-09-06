@@ -1,7 +1,9 @@
+- give up on cython for now, port some of the improvements (+YTYpR and -byY outside loop, merged matrix-vector dot product) to the non-cython version.
+
 - profile code with solve_gpu to identify the slowest parts of the batch building code
 
-- test solve_gpu on a proper GPU and measure speedups for several num_factors/batch_size values
+- Cython version: get rid of np.dot and implement these operations manually.
 
-- maybe also consider using Cython to speed up the for loop and numpy array indexing?
+- consider building a version that does most of the batch building on the GPU (using scikits.cuda / pycuda).
 
 - The algorithm could be adapted to work with CSR representations stored on disk in e.g. HDF5 format (for very large matrices). Try this?
