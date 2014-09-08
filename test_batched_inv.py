@@ -1,6 +1,7 @@
 import numpy as np
 import wmf
 import batched_inv
+import batched_inv_precompute
 import solve_mp
 import solve_gpu
 
@@ -20,6 +21,9 @@ batch_size = 10000
 solve = solve_gpu.solve_gpu
 
 
-U, V = wmf.factorize(S, num_factors=num_factors, lambda_reg=1e-5, num_iterations=num_iterations, init_std=0.01, verbose=True, dtype='float32',
-    recompute_factors=batched_inv.recompute_factors_bias_batched, batch_size=batch_size, solve=solve)
+# U, V = wmf.factorize(S, num_factors=num_factors, lambda_reg=1e-5, num_iterations=num_iterations, init_std=0.01, verbose=True, dtype='float32',
+#     recompute_factors=batched_inv.recompute_factors_bias_batched, batch_size=batch_size, solve=solve)
 
+
+U, V = wmf.factorize(S, num_factors=num_factors, lambda_reg=1e-5, num_iterations=num_iterations, init_std=0.01, verbose=True, dtype='float32',
+    recompute_factors=batched_inv_precompute.recompute_factors_bias_batched_precompute, batch_size=batch_size, solve=solve)
